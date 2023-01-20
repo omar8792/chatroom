@@ -10,6 +10,8 @@
     code_change/3
 ]).
 
+-record(user, {nickname, connected_at, msg_sent = 0}).
+
 start_link() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
     io:format("start_link: ~p~n", [Return]),
@@ -21,14 +23,16 @@ init([]) ->
     io:format("init: ~p~n", [State]),
     Return.
 
-handle_call({connect, Nickname}, From, State) ->
+handle_call({connect, Nickname}, _From, State) ->
     Response =
         case dict:is_key(Nickname, State) of
             true ->
                 NewState = State,
                 nickname_already_in_use;
             false ->
-                NewState = dict:append(Nickname, From, State),
+                NewState = dict:append(
+                    Nickname, #user{nickname = Nickname, connected_at = erlang:localtime()}, State
+                ),
                 ConnectedUsers = string:join(dict:fetch_keys(NewState), ":"),
                 {ok, ConnectedUsers}
         end,
