@@ -11,6 +11,7 @@
 ]).
 
 -record(user, {nickname, connected_at, msg_sent = 0}).
+-record(room, {name, users = [], created_by, created_at}).
 
 start_link() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
@@ -18,40 +19,85 @@ start_link() ->
     Return.
 
 init([]) ->
-    State = dict:new(),
-    Return = {ok, State},
-    io:format("init: ~p~n", [State]),
+    UsersState = dict:new(),
+    RoomsState = dict:new(),
+    Return = {ok, {UsersState, RoomsState}},
+    io:format("init: ~p~n", [{UsersState, RoomsState}]),
     Return.
 
-handle_call({connect, Nickname}, _From, State) ->
+handle_call({connect, Nickname}, _From, {UsersState, RoomsState}) ->
     Response =
-        case dict:is_key(Nickname, State) of
+        case dict:is_key(Nickname, UsersState) of
             true ->
-                NewState = State,
+                NewUsersState = UsersState,
                 nickname_already_in_use;
             false ->
-                NewState = dict:append(
-                    Nickname, #user{nickname = Nickname, connected_at = erlang:localtime()}, State
+                NewUsersState = dict:append(
+                    Nickname,
+                    #user{nickname = Nickname, connected_at = erlang:localtime()},
+                    UsersState
                 ),
-                ConnectedUsers = string:join(dict:fetch_keys(NewState), ":"),
-                {ok, ConnectedUsers}
+                ConnectedUsers = string:join(dict:fetch_keys(NewUsersState), ":"),
+                {ok, {ConnectedUsers, RoomsState}}
         end,
 
-    Return = {reply, Response, NewState},
+    Return = {reply, Response, {NewUsersState, RoomsState}},
     io:format("handle_call: ~p~n", [Return]),
     Return;
-handle_call({disconnect, Nickname}, _From, State) ->
+handle_call({disconnect, Nickname}, _From, {UsersState, RoomsState}) ->
     Response =
-        case dict:is_key(Nickname, State) of
+        case dict:is_key(Nickname, UsersState) of
             true ->
-                NewState = dict:erase(Nickname, State),
+                NewUsersState = dict:erase(Nickname, UsersState),
                 ok;
             false ->
-                NewState = State,
+                NewUsersState = UsersState,
                 nickname_not_found
         end,
 
-    Return = {reply, Response, NewState},
+    Return = {reply, Response, {NewUsersState, RoomsState}},
+    io:format("handle_call: ~p~n", [Return]),
+    Return;
+handle_call({create_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) ->
+    Response =
+        case dict:is_key(RoomName, RoomsState) of
+            true ->
+                NewRoomsState = RoomsState,
+                room_already_exists;
+            false ->
+                NewRoomsState = dict:append(
+                    RoomName,
+                    #room{name = RoomName, created_by = Nickname, created_at = erlang:localtime()},
+                    RoomsState
+                ),
+                AvailableRooms = string:join(dict:fetch_keys(NewRoomsState), ":"),
+                {ok, {UsersState, AvailableRooms}}
+        end,
+    Return = {reply, Response, {UsersState, NewRoomsState}},
+    io:format("handle_call: ~p~n", [Return]),
+    Return;
+handle_call(list_rooms, _From, {UsersState, RoomsState}) ->
+    Response = {ok, string:join(dict:fetch_keys(RoomsState), ":")},
+    Return = {reply, Response, {UsersState, RoomsState}},
+    io:format("handle_call: ~p~n", [Return]),
+    Return;
+handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) ->
+    Response =
+        case dict:find(RoomName, RoomsState) of
+            {ok, [R | _]} ->
+                if
+                    R#room.created_by == Nickname ->
+                        NewRoomsState = dict:erase(RoomName, RoomsState),
+                        ok;
+                    true ->
+                        NewRoomsState = RoomsState,
+                        room_not_created_by_user
+                end;
+            _ ->
+                NewRoomsState = RoomsState,
+                room_not_found
+        end,
+    Return = {reply, Response, {UsersState, NewRoomsState}},
     io:format("handle_call: ~p~n", [Return]),
     Return;
 handle_call(_Message, _From, State) ->
