@@ -1,6 +1,6 @@
 -module(chat_server).
 -behaviour(gen_server).
--export([start_link/0]).
+-export([boot/0]).
 -export([
     init/1,
     handle_call/3,
@@ -10,10 +10,10 @@
     code_change/3
 ]).
 
--record(user, {nickname, connected_at, msg_sent = 0}).
+-record(user, {nickname, socket, connected_at, msg_sent = 0}).
 -record(room, {name, users = [], created_by, created_at}).
 
-start_link() ->
+boot() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
     io:format("start_link: ~p~n", [Return]),
     Return.
@@ -25,7 +25,7 @@ init([]) ->
     io:format("init: ~p~n", [{UsersState, RoomsState}]),
     Return.
 
-handle_call({connect, Nickname}, _From, {UsersState, RoomsState}) ->
+handle_call({connect, Nickname, UserSocket}, _From, {UsersState, RoomsState}) ->
     Response =
         case dict:is_key(Nickname, UsersState) of
             true ->
@@ -34,11 +34,14 @@ handle_call({connect, Nickname}, _From, {UsersState, RoomsState}) ->
             false ->
                 NewUsersState = dict:append(
                     Nickname,
-                    #user{nickname = Nickname, connected_at = erlang:localtime()},
+                    RoomsState#user{
+                        nickname = Nickname,
+                        socket = UserSocket,
+                        connected_at = erlang:localtime()
+                    },
                     UsersState
                 ),
-                ConnectedUsers = string:join(dict:fetch_keys(NewUsersState), ":"),
-                {ok, {ConnectedUsers, RoomsState}}
+                {ok, Nickname}
         end,
 
     Return = {reply, Response, {NewUsersState, RoomsState}},

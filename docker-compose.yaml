@@ -6,3 +6,5 @@ services:
     volumes:
       - $PWD:/code
     working_dir: /code
+    ports:
+      - 12345:12345
