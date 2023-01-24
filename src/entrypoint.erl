@@ -7,13 +7,21 @@ start() ->
     socket_server:start(?MODULE, 12345, {?MODULE, pre_loop}).
 
 pre_loop(Socket) ->
-    gen_tcp:send(Socket, "Welcome, please type a username to connect to the chat\n"),
+    gen_tcp:send(
+        Socket,
+        "Welcome\n\n"
+        "Avaiables commands:\n\n"
+        "- SAY:<something> to send a message to all connected users\n"
+        "- CREATE_ROOM:<room_name> to create a room\n"
+        "- DESTROY_ROOM:<something> to delete room created\n"
+        "- LIST_ROOMS to see available rooms\n"
+        "- QUIT to logout\n\n"
+        "Please type a username to connect to the chat\n"
+    ),
 
     case gen_tcp:recv(Socket, 0) of
         {ok, Data} ->
-            io:format("Data: ~p~n", [binary_to_list(Data)]),
             Nick = binary_to_list(Data),
-            io:format("Nick: ~p~n", [Nick]),
             try_connection(clean(Nick), Socket);
         {error, closed} ->
             ok
@@ -33,7 +41,6 @@ try_connection(Nick, Socket) ->
 loop(Nick, Socket) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Data} ->
-            io:format("Data: ~p~n", [binary_to_list(Data)]),
             Message = binary_to_list(Data),
             {Command, Args} = lists:splitwith(fun(T) -> [T] =/= ":" end, Message),
             case {clean(Command), Args} of

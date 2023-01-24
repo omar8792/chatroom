@@ -33,8 +33,6 @@ handle_cast({accepted, _Pid}, State = #server_state{}) ->
 accept_loop({Server, Socket, {Module, LoopFunction}}) ->
     {ok, TcpSocket} = gen_tcp:accept(Socket),
     gen_server:cast(Server, {accepted, self()}),
-    io:format("New client connected: ~p~n", [Server]),
-    io:format("New client connected: ~p~n", [Socket]),
 
     Module:LoopFunction(TcpSocket).
 

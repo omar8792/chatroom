@@ -15,14 +15,12 @@
 
 boot() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
-    io:format("start_link: ~p~n", [Return]),
     Return.
 
 init([]) ->
     UsersState = dict:new(),
     RoomsState = dict:new(),
     Return = {ok, {UsersState, RoomsState}},
-    io:format("init: ~p~n", [{UsersState, RoomsState}]),
     Return.
 
 handle_call({connect, Nickname, UserSocket}, _From, {UsersState, RoomsState}) ->
@@ -47,7 +45,6 @@ handle_call({connect, Nickname, UserSocket}, _From, {UsersState, RoomsState}) ->
         end,
 
     Return = {reply, Response, {NewUsersState, RoomsState}},
-    io:format("handle_call: ~p~n", [Return]),
     Return;
 handle_call({disconnect, Nickname}, _From, {UsersState, RoomsState}) ->
     Response =
@@ -61,7 +58,6 @@ handle_call({disconnect, Nickname}, _From, {UsersState, RoomsState}) ->
         end,
 
     Return = {reply, Response, {NewUsersState, RoomsState}},
-    io:format("handle_call: ~p~n", [Return]),
     Return;
 handle_call({create_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) ->
     Response =
@@ -78,7 +74,6 @@ handle_call({create_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
                 ok
         end,
     Return = {reply, Response, {UsersState, NewRoomsState}},
-    io:format("handle_call: ~p~n", [Return]),
     Return;
 handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) ->
     Response =
@@ -97,7 +92,6 @@ handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
                 room_not_found
         end,
     Return = {reply, Response, {UsersState, NewRoomsState}},
-    io:format("handle_call: ~p~n", [Return]),
     Return;
 handle_call(_Message, _From, State) ->
     {reply, unknown_message, State}.
@@ -109,24 +103,12 @@ handle_cast({list_rooms, UserSocket}, {_UsersState, RoomsState} = State) ->
 handle_cast({say, Nick, Msg}, {UsersState, _RoomsState} = State) ->
     broadcast(Nick, Nick ++ ": " ++ Msg ++ "\n", UsersState),
     {noreply, State};
-handle_cast(Message, State) ->
-    io:format("handle_cast unknown message received: ~p~n", [Message]),
+handle_cast(_Message, State) ->
     {noreply, State}.
 
-handle_info(_Info, State) ->
-    Return = {noreply, State},
-    io:format("handle_info: ~p~n", [Return]),
-    Return.
-
-terminate(_Reason, _State) ->
-    Return = ok,
-    io:format("terminate: ~p~n", [Return]),
-    ok.
-
-code_change(_OldVsn, State, _Extra) ->
-    Return = {ok, State},
-    io:format("code_change: ~p~n", [Return]),
-    Return.
+handle_info(_Info, State) -> {noreply, State}.
+terminate(_Reason, _State) -> ok.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 broadcast(Nick, Msg, Users) ->
     Sockets = lists:map(
