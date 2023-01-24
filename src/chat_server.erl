@@ -15,6 +15,7 @@
 
 boot() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
+    io:format("Chat server started\n"),
     Return.
 
 init([]) ->
