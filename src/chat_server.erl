@@ -32,6 +32,8 @@ handle_call({connect, Nickname, UserSocket}, _From, {UsersState, RoomsState}) ->
                 NewUsersState = UsersState,
                 nickname_already_in_use;
             false ->
+                broadcast("#", Nickname ++ " has connected\n", UsersState),
+
                 NewUsersState = dict:append(
                     Nickname,
                     #user{
