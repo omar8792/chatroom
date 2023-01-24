@@ -81,11 +81,6 @@ handle_call({create_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
     Return = {reply, Response, {UsersState, NewRoomsState}},
     io:format("handle_call: ~p~n", [Return]),
     Return;
-handle_call(list_rooms, _From, {UsersState, RoomsState}) ->
-    Response = {ok, string:join(dict:fetch_keys(RoomsState), ":")},
-    Return = {reply, Response, {UsersState, RoomsState}},
-    io:format("handle_call: ~p~n", [Return]),
-    Return;
 handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) ->
     Response =
         case dict:find(RoomName, RoomsState) of
@@ -108,6 +103,9 @@ handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
 handle_call(_Message, _From, State) ->
     {reply, unknown_message, State}.
 
+handle_cast({list_rooms, UserSocket}, {_UsersState, RoomsState} = State) ->
+    direct(UserSocket, "available rooms:\n" ++ string:join(dict:fetch_keys(RoomsState), ":")),
+    {noreply, State};
 handle_cast({say, Nick, Msg}, {UsersState, _RoomsState} = State) ->
     broadcast(Nick, Nick ++ ": " ++ Msg ++ "\n", UsersState),
     {noreply, State};
@@ -135,3 +133,6 @@ broadcast(Nick, Msg, Users) ->
         fun({_, [User | _]}) -> User#user.socket end, dict:to_list(dict:erase(Nick, Users))
     ),
     lists:foreach(fun(Sock) -> gen_tcp:send(Sock, Msg) end, Sockets).
+
+direct(UserSocket, Msg) ->
+    gen_tcp:send(UserSocket, Msg).
