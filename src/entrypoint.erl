@@ -7,34 +7,27 @@ start() ->
     socket_server:start(?MODULE, 12345, {?MODULE, pre_loop}).
 
 pre_loop(Socket) ->
+    gen_tcp:send(Socket, "Welcome, please type a username to connect to the chat\n"),
+
     case gen_tcp:recv(Socket, 0) of
         {ok, Data} ->
             io:format("Data: ~p~n", [binary_to_list(Data)]),
-            Message = binary_to_list(Data),
-            {Command, [_ | Nick]} = lists:splitwith(fun(T) -> [T] =/= ":" end, Message),
+            Nick = binary_to_list(Data),
             io:format("Nick: ~p~n", [Nick]),
-            case Command of
-                "CONNECT" ->
                     try_connection(clean(Nick), Socket);
-                _ ->
-                    gen_tcp:send(Socket, "Unknown command!\n"),
-                    ok
-            end;
         {error, closed} ->
             ok
     end.
 
 try_connection(Nick, Socket) ->
-    io:format("USER SOCKER: ~p~n", [Socket]),
-
     Response = gen_server:call(chat_server, {connect, Nick, Socket}),
     case Response of
         {ok, User} ->
-            gen_tcp:send(Socket, "CONNECT:OK:" ++ User ++ "\n"),
+            gen_tcp:send(Socket, User ++ " connected to the chat\n"),
             loop(Nick, Socket);
         nickname_already_in_use ->
-            gen_tcp:send(Socket, "CONNECT:ERROR:Nickname already in use.\n"),
-            ok
+            gen_tcp:send(Socket, "Sorry the Nickname " ++ Nick ++ " is already in use.\n"),
+            pre_loop(Socket)
     end.
 
 loop(Nick, Socket) ->
