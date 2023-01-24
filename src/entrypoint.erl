@@ -42,10 +42,12 @@ loop(Nick, Socket) ->
         {ok, Data} ->
             io:format("Data: ~p~n", [binary_to_list(Data)]),
             Message = binary_to_list(Data),
-            {Command, [_ | _]} = lists:splitwith(fun(T) -> [T] =/= ":" end, Message),
+            {Command, [_ | Content]} = lists:splitwith(fun(T) -> [T] =/= ":" end, Message),
             case Command of
                 "QUIT" ->
                     disconnect(Nick, Socket);
+                "SAY" ->
+                    say(Nick, Socket, clean(Content));
                 _ ->
                     gen_tcp:send(Socket, "Unknown command!\n"),
                     ok
@@ -66,5 +68,9 @@ disconnect(Nick, Socket) ->
             ok
     end.
 
+say(Nick, Socket, Content) ->
+    gen_server:cast(chat_server, {say, Nick, Content}),
+    loop(Nick, Socket).
+
 clean(Data) ->
-    string:strip(Data, both, $\n).
+    re:replace(Data, "[\r\n]+", "", [global, {return, list}]).

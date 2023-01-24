@@ -34,7 +34,7 @@ handle_call({connect, Nickname, UserSocket}, _From, {UsersState, RoomsState}) ->
             false ->
                 NewUsersState = dict:append(
                     Nickname,
-                    RoomsState#user{
+                    #user{
                         nickname = Nickname,
                         socket = UserSocket,
                         connected_at = erlang:localtime()
@@ -106,10 +106,12 @@ handle_call({delete_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
 handle_call(_Message, _From, State) ->
     {reply, unknown_message, State}.
 
-handle_cast(_Msg, State) ->
-    Return = {noreply, State},
-    io:format("handle_cast: ~p~n", [Return]),
-    Return.
+handle_cast({say, Nick, Msg}, {UsersState, _RoomsState} = State) ->
+    broadcast(Nick, Nick ++ ": " ++ Msg ++ "\n", UsersState),
+    {noreply, State};
+handle_cast(Message, State) ->
+    io:format("handle_cast unknown message received: ~p~n", [Message]),
+    {noreply, State}.
 
 handle_info(_Info, State) ->
     Return = {noreply, State},
@@ -125,3 +127,9 @@ code_change(_OldVsn, State, _Extra) ->
     Return = {ok, State},
     io:format("code_change: ~p~n", [Return]),
     Return.
+
+broadcast(Nick, Msg, Users) ->
+    Sockets = lists:map(
+        fun({_, [User | _]}) -> User#user.socket end, dict:to_list(dict:erase(Nick, Users))
+    ),
+    lists:foreach(fun(Sock) -> gen_tcp:send(Sock, Msg) end, Sockets).
