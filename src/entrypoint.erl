@@ -10,10 +10,10 @@ pre_loop(Socket) ->
     gen_tcp:send(
         Socket,
         "Welcome\n\n"
-        "Avaiables commands:\n\n"
+        "Available commands:\n\n"
         "- SAY:<something> to send a message to all connected users\n"
         "- CREATE_ROOM:<room_name> to create a room\n"
-        "- DESTROY_ROOM:<something> to delete room created\n"
+        "- DESTROY_ROOM:<something> to delete a created room\n"
         "- LIST_ROOMS to see available rooms\n"
         "- QUIT to logout\n\n"
         "Please type a username to connect to the chat\n"
