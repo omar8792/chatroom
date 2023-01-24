@@ -10,7 +10,7 @@
 -export([start/2, stop/1]).
 
 start(_StartType, _StartArgs) ->
-    chatroom_sup:start_link().
+    entrypoint:start().
 
 stop(_State) ->
     ok.
