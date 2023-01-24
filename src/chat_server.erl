@@ -75,8 +75,7 @@ handle_call({create_room, Nickname, RoomName}, _From, {UsersState, RoomsState}) 
                     #room{name = RoomName, created_by = Nickname, created_at = erlang:localtime()},
                     RoomsState
                 ),
-                AvailableRooms = string:join(dict:fetch_keys(NewRoomsState), ":"),
-                {ok, {UsersState, AvailableRooms}}
+                ok
         end,
     Return = {reply, Response, {UsersState, NewRoomsState}},
     io:format("handle_call: ~p~n", [Return]),
@@ -104,7 +103,8 @@ handle_call(_Message, _From, State) ->
     {reply, unknown_message, State}.
 
 handle_cast({list_rooms, UserSocket}, {_UsersState, RoomsState} = State) ->
-    direct(UserSocket, "available rooms:\n" ++ string:join(dict:fetch_keys(RoomsState), ":")),
+    Rooms = dict:fetch_keys(RoomsState),
+    direct(UserSocket, "available rooms:\n" ++ string:join(Rooms, "\n") ++ "\n"),
     {noreply, State};
 handle_cast({say, Nick, Msg}, {UsersState, _RoomsState} = State) ->
     broadcast(Nick, Nick ++ ": " ++ Msg ++ "\n", UsersState),
